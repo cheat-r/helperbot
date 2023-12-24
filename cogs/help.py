@@ -27,7 +27,7 @@ class Help(commands.Cog):
     async def on_message(self, message):
       if message.author.bot: return
       if self.bot.user.mention == message.content:
-        await message.reply('Привет! \nЕсли понадоблюсь, я в слеш-командах. (или используй </help:1147182522283855964>, если хочешь узнать обо мне подробнее)')
+        await message.reply('Привет! \nЕсли понадоблюсь, я в слеш-командах. (или используй `/help`, если хочешь узнать обо мне подробнее)')
 
     @commands.slash_command(description='Полезная (и не очень) статистика, на случай если вам интересно')
     async def statistics(self, inter: disnake.ApplicationCommandInteraction):
@@ -37,6 +37,7 @@ class Help(commands.Cog):
       time_min = int(uptime) / 60 - int(time_h) * 60 - int(time_d) * 24 * 60
       time_sec = int(uptime) - int(time_min) * 60 - int(time_h) * 3600 - int(time_d) * 24 * 60 * 60
       uptime_str = '%01d дн., %02d ч., %02d мин. и %02d сек.' % (time_d, time_h, time_min, time_sec)
+      process = psutil.Process(os.getpid())
       cpu_percent = psutil.cpu_percent()
       ram = psutil.virtual_memory()
       ram_used = human_readable_size(ram.used)
@@ -44,10 +45,10 @@ class Help(commands.Cog):
       ram_available = human_readable_size(ram.available)
       embed = disnake.Embed(title=':information_source: Статистика бота', color=disnake.Color(0x474896))
       embed.add_field(name=':clock1: Аптайм бота',value=f'{uptime_str} (<t:{int(self.bot.start_time.timestamp())}:R>)',inline=False)
-      embed.add_field(name=':control_knobs: Использование процессора',value=f'{cpu_percent}%',inline=True)
-      embed.add_field(name=':file_cabinet: Использование ОЗУ',value=human_readable_size(process.memory_info().rss),inline=True)
-      embed.add_field(name=':file_cabinet: Всего ОЗУ',value=f'Using: {ram_used} ({ram.percent}%) / {ram_total}\nAvailable: {ram_available} ({ram.available * 100 / ram.total:.1f}%)',inline=False)
-      embed.add_field(name=':signal_strength: Пинг',value=f'{round(self.bot.latency * 1000)}ms',inline=True)
+      embed.add_field(name=':control_knobs: Расход процессора',value=f'{cpu_percent}%',inline=True)
+      embed.add_field(name=':file_cabinet: Расход ОЗУ',value=human_readable_size(process.memory_info().rss),inline=True)
+      embed.add_field(name=':file_cabinet: Всего ОЗУ',value=f'Занято: {ram_used} ({ram.percent}%) / {ram_total}\nСвободно: {ram_available} ({ram.available * 100 / ram.total:.1f}%)',inline=False)
+      embed.add_field(name=':signal_strength: Пинг',value=f'{round(self.bot.latency * 1000)}мс',inline=True)
       await inter.response.send_message(embed=embed, ephemeral=True)
       
 def setup(bot: commands.Bot):
