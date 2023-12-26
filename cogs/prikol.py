@@ -174,7 +174,8 @@ class QuestionSelect(disnake.ui.StringSelect):
                 pass
 
             if self.score >= 2:
-                await ia.author.add_roles(1014569986968268891)
+                role = ia.guild.get_role(1014569986968268891)
+                await ia.author.add_roles(role)
                 await self.message.edit(':ballot_box_with_check: Поздравляю с прохождением верификации! Теперь ты полноценный член нашего рандомного общества. Приятного общения!', view=None)
             else:
                 await self.message.edit(':x: Где-то вы ошиблись. Попробуйте ещё раз. <:nikoeepy:1181309167152136264>', view=None)
