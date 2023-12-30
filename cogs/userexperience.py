@@ -71,7 +71,7 @@ class UserExperience(commands.Cog):
 
   @commands.slash_command(
   name='embedcreate',
-  description='создаёт эмбед от вашего имени всего за 300 сухариков!',
+  description='Создаёт эмбед от вашего имени всего за 300 сухариков!',
   options=[
     disnake.Option('message', 'Внутренности вашего сообщения', disnake.OptionType.string, True),
   ])
