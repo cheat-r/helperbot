@@ -92,12 +92,13 @@ class UserExperience(commands.Cog):
   async def on_application_command(self, ia: disnake.AppCmdInter):
     self.bot.add_user_to_db(ia.author.id)
     if not self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps']:
-      self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] = True
-      embed = disnake.Embed(color=disnake.Color(0x474896))
-      embed.description = 'Воспользоваться ботом в самый первый раз'
-      embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1100892814826549378/good.png')
-      embed.set_author(name=f'{ia.author.display_name} получил(а) достижение "Первые шаги"', icon_url=ia.author.display_avatar)
-      await ia.channel.send(embed=embed)
+			if self.bot.db['members'][str(ia.author.id)]['balance'] == 100:
+				self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] = True
+				embed = disnake.Embed(color=disnake.Color(0x474896))
+				embed.description = 'Заработать первые 100 сухариков'
+				embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1100892814826549378/good.png')
+				embed.set_author(name=f'{ia.author.display_name} получил(а) достижение "Начало положено"', icon_url=ia.author.display_avatar)
+				await ia.channel.send(embed=embed)
 
   @commands.slash_command(
     name='achievements',
@@ -106,13 +107,13 @@ class UserExperience(commands.Cog):
       disnake.Option('member', 'Участник, чьи ачивки вы хотите посмотреть', disnake.OptionType.user, False),
     ])
   async def achievements(self, ia: disnake.AppCmdInter, member: disnake.User = None):
-    if member == None or member == ia.author:
+    if member == None or member == ia.author
       self.bot.add_user_to_db(ia.author.id)
       accessGranted = self.bot.db['members'][str(ia.author.id)]['achievements']['accessGranted']
       donator = self.bot.db['members'][str(ia.author.id)]['achievements']['donator']
       embed = disnake.Embed(color=disnake.Color(0x474896))
       embed.set_author(name=f'Достижения {ia.author.display_name}', icon_url=ia.author.display_avatar)
-      embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] else '❌'),value='Воспользоваться ботом в первый раз', inline=False)
+      embed.add_field(name='Начало положено '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] else '❌'),value='Заработать первые 100 сухариков', inline=False)
       embed.add_field(name='Дихлофос '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['bugHunter'] else '❌'),value='Сообщить об ошибке внутри бота',inline=False)
       embed.add_field(name='Доступ разрешён '+('✅' if accessGranted else '❌'),value='Назвать кодовую фразу'+('\n(бесполезная на первый взгляд фраза в правилах может помочь)' if not accessGranted else ''),inline=False)
       embed.add_field(name='Меценат '+(f'✅ (Пожертвовано {str(donator)}<:kirieshka:1100873685201588285>)' if donator>0 else '❌'),value='Принять участие в Цветном сборе'+('\n(можно хоть один сухарик, главное чтобы цель сбора была достигнута)' if donator==0 else ''),inline=False)
@@ -126,7 +127,7 @@ class UserExperience(commands.Cog):
         donator = self.bot.db['members'][str(member.id)]['achievements']['donator']
         embed = disnake.Embed(color=disnake.Color(0x474896))
         embed.set_author(name=f'Достижения {member.display_name}', icon_url=member.display_avatar)
-        embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['firstSteps'] else '❌'),value='Воспользоваться ботом в первый раз', inline=False)
+        embed.add_field(name='Начало положено '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['firstSteps'] else '❌'),value='Заработать первые 100 сухариков', inline=False)
         embed.add_field(name='Дихлофос '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['bugHunter'] else '❌'),value='Сообщить об ошибке внутри бота',inline=False)
         embed.add_field(name='Доступ разрешён '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['accessGranted'] else '❌'),value='Назвать кодовую фразу',inline=False)
         embed.add_field(name='Меценат '+(f'✅ (Пожертвовано {str(donator)}<:kirieshka:1100873685201588285>)' if donator>0 else '❌'),value='Принять участие в Цветном сборе',inline=False)
@@ -139,7 +140,7 @@ class UserExperience(commands.Cog):
       donator = self.bot.db['members'][str(ia.author.id)]['achievements']['donator']
       embed = disnake.Embed(color=disnake.Color(0x474896))
       embed.set_author(name=f'Достижения {ia.author.display_name}', icon_url=ia.author.display_avatar)
-      embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] else '❌'),value='Воспользоваться ботом в первый раз', inline=False)
+      embed.add_field(name='Начало положено '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] else '❌'),value='Заработать первые 100 сухариков', inline=False)
       embed.add_field(name='Дихлофос '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['bugHunter'] else '❌'),value='Сообщить об ошибке внутри бота',inline=False)
       embed.add_field(name='Доступ разрешён '+('✅' if accessGranted else '❌'),value='Назвать кодовую фразу'+('\n(бесполезная на первый взгляд фраза в правилах может помочь)' if not accessGranted else ''),inline=False)
       embed.add_field(name='Меценат '+(f'✅ (Пожертвовано {str(donator)}<:kirieshka:1100873685201588285>)' if donator>0 else '❌'),value='Принять участие в Цветном сборе'+('\n(можно хоть один сухарик, главное чтобы цель сбора была достигнута)' if donator==0 else ''),inline=False)
@@ -153,7 +154,7 @@ class UserExperience(commands.Cog):
         donator = self.bot.db['members'][str(member.id)]['achievements']['donator']
         embed = disnake.Embed(color=disnake.Color(0x474896))
         embed.set_author(name=f'Достижения {member.display_name}', icon_url=member.display_avatar)
-        embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['firstSteps'] else '❌'),value='Воспользоваться ботом в первый раз', inline=False)
+        embed.add_field(name='Начало положено '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['firstSteps'] else '❌'),value='Заработать первые 100 сухариков', inline=False)
         embed.add_field(name='Дихлофос '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['bugHunter'] else '❌'),value='Сообщить об ошибке внутри бота',inline=False)
         embed.add_field(name='Доступ разрешён '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['accessGranted'] else '❌'),value='Назвать кодовую фразу',inline=False)
         embed.add_field(name='Меценат '+(f'✅ (Пожертвовано {str(donator)}<:kirieshka:1100873685201588285>)' if donator>0 else '❌'),value='Принять участие в Цветном сборе',inline=False)
