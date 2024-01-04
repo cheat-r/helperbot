@@ -14,30 +14,34 @@ class UserExperience(commands.Cog):
 
   @commands.Cog.listener()
   async def on_message(self, message):
-    if message.author.bot: return
-    if not message.guild: return
-    self.bot.add_user_to_db(message.author.id)
-    if ((message.content.lower() == "а это цифра 9" or message.content.lower() == "а это цифра 9.") and not self.bot.db['members'][str(message.author.id)]['achievements']['accessGranted']):
-      embed = disnake.Embed(color=disnake.Color(0x474896))
-      embed.description = 'Назвать кодовую фразу'
-      embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1101056017720160276/uz8BiFQ8vDI.jpg')
-      embed.set_author(name=f'{message.author.display_name} получил(а) достижение "Доступ разрешён"', icon_url=message.author.display_avatar)
-      await message.channel.send(embed=embed)
-      await message.delete()
-      self.bot.db['members'][str(message.author.id)]['achievements']['accessGranted'] = True
-      print('Названа кодовая фраза!')
-    if message.author.get_role(1061931684003577876):
-      self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(4,9)
-      print(f'Поймал сообщение от {message.author} (Создатель актива)')
-    elif message.author.get_role(1063012529640583179):
-      self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(3,7)
-      print(f'Поймал сообщение от {message.author} (Ценитель общения)')
-    elif message.author.get_role(1063012925591269426):
-      self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(2,5)
-      print(f'Поймал сообщение от {message.author} (Словесная поддержка)')
+    if message.author.bot or not message.guild: return
+    if not str(message.author.id) in self.db['members'].keys():
+      print(f'К нам пришёл новенький - {message.author}! Игнорирую сообщение.')
     else:
-      self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(1,3)
-      print(f'Поймал сообщение от {message.author}')
+      if (message.content.lower() == "а это цифра 9" or message.content.lower() == "а это цифра 9."):
+          self.bot.add_user_to_db(message.author.id)
+          if not self.bot.db['members'][str(message.author.id)]['achievements']['accessGranted']:
+            embed = disnake.Embed(color=disnake.Color(0x474896))
+            embed.description = 'Назвать кодовую фразу'
+            embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1101056017720160276/uz8BiFQ8vDI.jpg')
+            embed.set_author(name=f'{message.author.display_name} получил(а) достижение "Доступ разрешён"', icon_url=message.author.display_avatar)
+            await message.channel.send(embed=embed)
+            await message.delete()
+            self.bot.db['members'][str(message.author.id)]['achievements']['accessGranted'] = True
+            print('Названа кодовая фраза!')
+      else:
+        if message.author.get_role(1061931684003577876):
+          self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(4,9)
+          print(f'Поймал сообщение от {message.author} (Создатель актива)')
+        elif message.author.get_role(1063012529640583179):
+          self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(3,7)
+          print(f'Поймал сообщение от {message.author} (Ценитель общения)')
+        elif message.author.get_role(1063012925591269426):
+          self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(2,5)
+          print(f'Поймал сообщение от {message.author} (Словесная поддержка)')
+        else:
+          self.bot.db['members'][str(message.author.id)]['balance'] += random.randint(1,3)
+          print(f'Поймал сообщение от {message.author}')
 
   @commands.slash_command(
     name='balance',
@@ -47,9 +51,15 @@ class UserExperience(commands.Cog):
     ])
   async def balance(self, ia: disnake.AppCmdInter, member: disnake.User = None):
     if member == None or member == ia.author:
-      if not str(ia.author.id) in self.bot.db['members'].keys():
-        await ia.response.send_message('Вы решили проверить счёт ещё до создания своего счёта. Пожалуйста, перезапустите команду.',ephemeral=True)
+      self.bot.add_user_to_db(ia.author.id)
       await ia.response.send_message('Ваш баланс: {0}<:kirieshka:1100873685201588285>'.format(self.bot.db['members'][str(ia.author.id)]['balance']),ephemeral=True)
+      if not self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] and self.bot.db['members'][str(ia.author.id)]['balance'] >= 100:
+        self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] = True
+        embed = disnake.Embed(color=disnake.Color(0x474896))
+        embed.description = 'Заработать первые 100 сухариков'
+        embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1100892814826549378/good.png')
+        embed.set_author(name=f'{ia.author.display_name} получил(а) достижение "Первые шаги"', icon_url=ia.author.display_avatar)
+        await ia.channel.send(embed=embed)
     else:
       if member.bot:
         await ia.response.send_message('Это бот, а не участник. Пожалуйста, выберите кого-нибудь поодушевлённее.',ephemeral=True)
@@ -60,7 +70,15 @@ class UserExperience(commands.Cog):
   @commands.user_command(name="Посмотреть баланс")
   async def ctx_balance(self, ia: disnake.AppCmdInter, member: disnake.User):
     if member == None or member == ia.author:
+      self.bot.add_user_to_db(ia.author.id)
       await ia.response.send_message('Ваш баланс: {0}<:kirieshka:1100873685201588285>'.format(self.bot.db['members'][str(ia.author.id)]['balance']),ephemeral=True)
+      if not self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] and self.bot.db['members'][str(ia.author.id)]['balance'] >= 100:
+        self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] = True
+        embed = disnake.Embed(color=disnake.Color(0x474896))
+        embed.description = 'Заработать первые 100 сухариков'
+        embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1100892814826549378/good.png')
+        embed.set_author(name=f'{ia.author.display_name} получил(а) достижение "Первые шаги"', icon_url=ia.author.display_avatar)
+        await ia.channel.send(embed=embed)
     else:
       if member.bot:
         await ia.response.send_message('Это бот, а не участник. Пожалуйста, выберите кого-нибудь поодушевлённее.',ephemeral=True)
@@ -87,17 +105,6 @@ class UserExperience(commands.Cog):
       self.bot.db['members'][str(ia.author.id)]['balance'] -= 300
       await ia.channel.send(embed=embed)
       await ia.edit_original_response(content='Сообщение отправлено!\n')
-  
-  @commands.Cog.listener()
-  async def on_application_command(self, ia: disnake.AppCmdInter):
-    self.bot.add_user_to_db(ia.author.id)
-    if not self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps']:
-      self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] = True
-      embed = disnake.Embed(color=disnake.Color(0x474896))
-      embed.description = 'Воспользоваться ботом в самый первый раз'
-      embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1100892814826549378/good.png')
-      embed.set_author(name=f'{ia.author.display_name} получил(а) достижение "Первые шаги"', icon_url=ia.author.display_avatar)
-      await ia.channel.send(embed=embed)
 
   @commands.slash_command(
     name='achievements',

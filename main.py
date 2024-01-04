@@ -16,7 +16,7 @@ class Bot(commands.Bot):
             help_command=None,
             intents=disnake.Intents.all(),
             status=disnake.Status.idle,
-            activity=disnake.CustomActivity(state="[Плюс хостинг, минус нервы]", name='Custom Status'),
+            activity=disnake.CustomActivity(state="[С новым кодом!]", name='Custom Status'),
             reload=True,
             *args,
             **kwargs
@@ -44,7 +44,7 @@ class Bot(commands.Bot):
     async def on_member_remove(self, member):
         if member.bot: return
         if str(member.id) in self.db['members'].keys():
-            if not self.db['members'][str(member.id)]['achievements']['firstSteps'] or self.db['members'][str(member.id)]['messages'] < 100:
+            if not self.db['members'][str(member.id)]['achievements']['firstSteps']:
                 self.db['members'].pop(str(member.id))
                 self.db_save()
 
@@ -52,7 +52,6 @@ class Bot(commands.Bot):
         if not str(user_id) in self.db['members'].keys():
             self.db['members'][str(user_id)] = {
                 "balance": 0,
-                "messages": 0,
                 "hold": 0,
                 "achievements": {
                 "firstSteps": False,
