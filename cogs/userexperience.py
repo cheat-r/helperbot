@@ -119,7 +119,7 @@ class UserExperience(commands.Cog):
       donator = self.bot.db['members'][str(ia.author.id)]['achievements']['donator']
       embed = disnake.Embed(color=disnake.Color(0x474896))
       embed.set_author(name=f'Достижения {ia.author.display_name}', icon_url=ia.author.display_avatar)
-      embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] else '❌'),value='Воспользоваться ботом в первый раз', inline=False)
+      embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['firstSteps'] else '❌'),value='Заработать первые 100 сухариков', inline=False)
       embed.add_field(name='Дихлофос '+('✅' if self.bot.db['members'][str(ia.author.id)]['achievements']['bugHunter'] else '❌'),value='Сообщить об ошибке внутри бота',inline=False)
       embed.add_field(name='Доступ разрешён '+('✅' if accessGranted else '❌'),value='Назвать кодовую фразу'+('\n(бесполезная на первый взгляд фраза в правилах может помочь)' if not accessGranted else ''),inline=False)
       embed.add_field(name='Меценат '+(f'✅ (Пожертвовано {str(donator)}<:kirieshka:1100873685201588285>)' if donator>0 else '❌'),value='Принять участие в Цветном сборе'+('\n(можно хоть один сухарик, главное чтобы цель сбора была достигнута)' if donator==0 else ''),inline=False)
@@ -133,7 +133,7 @@ class UserExperience(commands.Cog):
         donator = self.bot.db['members'][str(member.id)]['achievements']['donator']
         embed = disnake.Embed(color=disnake.Color(0x474896))
         embed.set_author(name=f'Достижения {member.display_name}', icon_url=member.display_avatar)
-        embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['firstSteps'] else '❌'),value='Воспользоваться ботом в первый раз', inline=False)
+        embed.add_field(name='Первые шаги '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['firstSteps'] else '❌'),value='Заработать первые 100 сухариков', inline=False)
         embed.add_field(name='Дихлофос '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['bugHunter'] else '❌'),value='Сообщить об ошибке внутри бота',inline=False)
         embed.add_field(name='Доступ разрешён '+('✅' if self.bot.db['members'][str(member.id)]['achievements']['accessGranted'] else '❌'),value='Назвать кодовую фразу',inline=False)
         embed.add_field(name='Меценат '+(f'✅ (Пожертвовано {str(donator)}<:kirieshka:1100873685201588285>)' if donator>0 else '❌'),value='Принять участие в Цветном сборе',inline=False)
