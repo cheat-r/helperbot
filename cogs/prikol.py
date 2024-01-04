@@ -77,8 +77,7 @@ class Prikol(commands.Cog):
         await ia.response.defer(ephemeral=True)
         await ia.channel.send('Спасибо, что дочитали до конца!\nТеперь пора получить роль Рандомовца, с которой вы получите все базовые права. \nНажмите на кнопку, и мы начнём процесс верификации. Не волнуйтесь, *больно не будет*.',
         components=[
-        disnake.ui.Button(label='Верифицироваться', style=disnake.ButtonStyle.green, emoji='<:whothefu:1068100193192509450>', custom_id='verify'),
-        disnake.ui.Button(label='Посетить сайт', style=disnake.ButtonStyle.link, emoji='<:nikoeepy:1181309167152136264>')
+        disnake.ui.Button(label='Верифицироваться', style=disnake.ButtonStyle.green, emoji='<:whothefu:1068100193192509450>', custom_id='verify')
         ]
         )
         await ia.edit_original_response('Сообщение отправлено.')
