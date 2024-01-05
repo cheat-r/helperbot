@@ -15,7 +15,7 @@ class UserExperience(commands.Cog):
   @commands.Cog.listener()
   async def on_message(self, message):
     if message.author.bot or not message.guild: return
-    if not str(message.author.id) in self.db['members'].keys():
+    if not str(message.author.id) in self.bot.db['members'].keys():
       print(f'К нам пришёл новенький - {message.author}! Игнорирую сообщение.')
     else:
       if (message.content.lower() == "а это цифра 9" or message.content.lower() == "а это цифра 9."):
