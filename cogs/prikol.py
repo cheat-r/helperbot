@@ -18,57 +18,162 @@ class Prikol(commands.Cog):
     async def duel(self, inter: disnake.ApplicationCommandInteraction ):
         author = inter.author
         view = Confirm(author)
-        await inter.response.send_message(f"`{inter.author}` готовится к дуэли... \nОсмелится ли кто-то принять вызов?", view=view)
+        await inter.response.send_message(f"`{inter.author}` готовится к игре в Револьветку... \nОсмелится ли кто-то принять вызов?", view=view)
         await view.wait()
         message = await inter.original_message()
         if view.value is None or view.value is False:
           await message.delete()
         else:
             view.clear_items()
-            await message.edit(f"`{view.user}` принял дуэль!", view=view)
+            await message.edit(f"`{view.user}` согласился на игру с `{inter.author}`!", view=view)
             await asyncio.sleep(3)
-            if random.randrange(1,3) == 1:
-              attack = inter.author
-              defence = view.user
+            dealer = inter.author
+            player = view.user
+            health = random.randint(2,6)
+            # health = 1
+            dealer_health = health
+            player_health = health
+            round = 0
+            barrel = []
+            turn = random.choice([dealer,player])
+            while dealer_health > 0 and player_health > 0:
+                if barrel == []:
+                    for x in range(0,random.randint(0,4)):
+                        barrel.append(random.randint(0,1))
+                    barrel.append(1)
+                    barrel.append(0)
+                    random.shuffle(barrel)
+                    round += 1
+                    await message.edit(f'{barrel.count(1)} патрон(а), {barrel.count(0)} пустой(-ых)')
+                print(barrel)
+                embed = disnake.Embed(color=disnake.Color(0x474896))
+                embed.set_author(name=f'Револьветка - раунд {round}')
+                print(f"{turn}'s turn!")
+                embed.title = f'Ход `{turn}`!'
+                embed.add_field(name=f'Заряды `{dealer}`:',value=('⚡' * dealer_health))
+                embed.add_field(name=f'Заряды `{player}`:',value=('⚡' * player_health))
+                view = Actions(turn,dealer,player)
+                await message.edit(embed=embed,view=view)
+                print('waiting for input...')
+                await view.wait()
+                view.clear_items()
+                embed = None
+                if view.value is None:
+                    await message.edit(f'Техническое поражение - `{turn}` не среагировал в течении 3-х минут.\nПобеда присуждается `'+(str(dealer) if turn == player else str(player))+'`!',view=view,embed=embed)
+                    break
+                elif view.value is False:
+                    if barrel[0] == 0:
+                        await message.edit(f'{turn} выстрелил в себя... Повезло, это был пустой.',view=view)
+                    elif barrel[0] == 1:
+                        await message.edit(f'{turn} выстрелил в себя... Упс! Кажется у кого-то теперь дырка в голове.',view=view)
+                        if turn == dealer:
+                            dealer_health -= 1
+                            turn = player
+                        elif turn == player:
+                            player_health -= 1
+                            turn = dealer
+                    barrel.pop(0)
+                elif view.value is True:
+                    if barrel[0] == 0:
+                        await message.edit(f'{turn} выстрелил в оппонента... Это оказался пустой. Не повезло! (или повезло?)',view=view)
+                        if turn == dealer:
+                            turn = player
+                        elif turn == player:
+                            turn = dealer
+                    elif barrel[0] == 1:
+                        await message.edit(f'{turn} выстрелил в оппонента... Ух! Попал, да ещё как!',view=view)
+                        if turn == dealer:
+                            player_health -= 1
+                            turn = player
+                        elif turn == player:
+                            dealer_health -= 1
+                            turn = dealer
+                    barrel.pop(0)
+                await asyncio.sleep(3)
+            view.clear_items()
+            embed = None
+            if dealer_health == 0:
+                await message.edit(f'`{player}` обыграл `{dealer}` с {player_health} ХП в запасе! (Начальный лимит - {health})',view=view,embed=embed)
+            elif player_health == 0:
+                await message.edit(f'`{dealer}` обыграл `{player}` с {dealer_health} ХП в запасе! (Начальный лимит - {health})',view=view,embed=embed)
+
+class Shoot(disnake.ui.View):
+    def __init__(self):
+        super().__init__(timeout=30.0)
+        self.value: Optional[bool] = None
+
+    @disnake.ui.button(label="В оппонента", style=disnake.ButtonStyle.blurple)
+    async def shoot_op(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.value = True
+        self.stop()
+    
+    @disnake.ui.button(label="В себя", style=disnake.ButtonStyle.gray)
+    async def shoot_self(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.value = False
+        self.stop()
+
+class Actions(disnake.ui.View):
+    def __init__(self,turn,dealer,player):
+        self.turn = turn
+        self.dealer = dealer
+        self.player = player
+        super().__init__(timeout=180.0)
+        self.value: Optional[bool] = None
+        self.user: Optional[int] = None
+
+    @disnake.ui.button(label="Выстрелить!", style=disnake.ButtonStyle.red)
+    async def shoot(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        if inter.user == self.turn:
+          view = Shoot()
+          await inter.response.send_message('Куда стрелять будем?',view=view,ephemeral=True)
+          await view.wait()
+          if view.value is not None:
+            if view.value == False: self.value = False
+            if view.value == True: self.value = True
+            message = await inter.original_message()
+            await message.delete()
+            self.stop()
+        else:
+            if inter.user == self.dealer or inter.user == self.player:
+                await inter.response.send_message('Сейчас не ваш ход.', ephemeral=True)
             else:
-                attack = view.user
-                defence = inter.author
-            await message.edit(f"Жребий брошен! Первым стреляет `{attack}`.")
-            await asyncio.sleep(3)
-            fight = True
-            while fight == True:
-              x=0
-              if random.randrange(1,6) == 5:
-                await message.edit(f"`{defence}` начинает уворачиваться! Шанс попадания снижен до 25%.")
-                x=2
-              else:
-                 await message.edit(f"`{defence}` предпочёл постоять. Шанс попадания - 50%")
-              await asyncio.sleep(3)
-              if random.randrange(1,3+x) == 1:
-                  await message.edit(f"БАХ! `{attack}` попал прямо в голову...")
-                  await asyncio.sleep(3)
-                  await message.edit(f"Победа присуждается `{attack}`! \nПроигравший - `{defence}`.")
-                  fight = False
-                  break
-              else:
-                  await message.edit(f"БАХ! Кажется, не попал... Ход переходит `{defence}`.")
-              x=0
-              await asyncio.sleep(3)
-              if random.randrange(1,6) == 5:
-                await message.edit(f"`{attack}` начинает уворачиваться! Шанс попадания снижен до 25%.")
-                x=2
-              else:
-                 await message.edit(f"`{attack}` предпочёл постоять. Шанс попадания - 50%")
-              await asyncio.sleep(3)
-              if random.randrange(1,3+x) == 1:
-                  await message.edit(f"БАХ! `{defence}` попал прямо в голову...")
-                  await asyncio.sleep(3)
-                  await message.edit(f"Победа присуждается `{defence}`! \nПроигравший - `{attack}`.")
-                  fight = False
-                  break
-              else:
-                  await message.edit(f"БАХ! Кажется, не попал... Ход переходит `{attack}`.")
-                  await asyncio.sleep(3)
+                await inter.response.send_message('Вы не участвуете в игре.', ephemeral=True)
+    
+#    @disnake.ui.button(label="Использовать предмет", style=disnake.ButtonStyle.blurple)
+#    async def inv_check(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+#       
+#    @disnake.ui.button(label="Просмотреть инвентарь", style=disnake.ButtonStyle.gray)
+#    async def inv_check(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+#      if inter.user.id == self.author.id:
+#        self.value = False
+#        self.stop()
+#      else:
+#        await inter.response.send_message('Отменить игру в силах лишь тот, кто предложил в неё сыграть.', ephemeral=True)
+
+class Confirm(disnake.ui.View):
+    def __init__(self, author):
+        self.author = author
+        super().__init__(timeout=60.0)
+        self.value: Optional[bool] = None
+        self.user: Optional[int] = None
+
+    @disnake.ui.button(label="Присоединиться к игре", style=disnake.ButtonStyle.blurple)
+    async def confirm(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        if inter.user.id == self.author.id:
+          await inter.response.send_message('Нельзя присоединиться к самому себе.', ephemeral=True)
+        else:
+          self.value = True
+          self.user = inter.user
+          self.stop()
+        
+    @disnake.ui.button(label="Отменить игру", style=disnake.ButtonStyle.red)
+    async def cancel(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+      if inter.user.id == self.author.id:
+        self.value = False
+        self.stop()
+      else:
+        await inter.response.send_message('Отменить игру в силах лишь тот, кто предложил в неё сыграть.', ephemeral=True)
+
     @commands.slash_command(
     name='verification_create',
     description='Создаёт сообщение верификации')
@@ -103,7 +208,6 @@ class QuestionSelect(disnake.ui.StringSelect):
         options = []
 
         if question == 1:
-            # Вопрос 1
             options = [
                 disnake.SelectOption(label='Если не написано, значит можно', value='q1_a1'),
                 disnake.SelectOption(label='Сделаю один раз', description='если не наказали - значит можно', value='q1_a2'),
@@ -111,7 +215,6 @@ class QuestionSelect(disnake.ui.StringSelect):
                 disnake.SelectOption(label='Я сам себе админ', description='чё хочу, то и творю', value='q1_a4'),
             ]
         elif question == 2:
-            # Вопрос 2
             options = [
                 disnake.SelectOption(label='Сообщить админам', description='через тикет или пинг роли', value='q2_a1'),
                 disnake.SelectOption(label='Наблюдать', description='само успокоится', value='q2_a2'),
@@ -119,7 +222,6 @@ class QuestionSelect(disnake.ui.StringSelect):
                 disnake.SelectOption(label='Решить всё самому', description='да кому нужны эти админы?', value='q2_a4'),
             ]
         elif question == 3:
-            # Вопрос 3
             options = [
                 disnake.SelectOption(label='чё?', value='q3_a1'),
                 disnake.SelectOption(label='цифра 6, весьма полезное', value='q3_a2'),
@@ -178,30 +280,6 @@ class QuestionSelect(disnake.ui.StringSelect):
                 await self.message.edit(':ballot_box_with_check: Поздравляю с прохождением верификации! Теперь ты полноценный член нашего рандомного общества. Приятного общения!', view=None)
             else:
                 await self.message.edit(':x: Где-то вы ошиблись. Попробуйте ещё раз. <:nikoeepy:1181309167152136264>', view=None)
-
-class Confirm(disnake.ui.View):
-    def __init__(self, author):
-        self.author = author
-        super().__init__(timeout=60.0)
-        self.value: Optional[bool] = None
-        self.user: Optional[int] = None
-
-    @disnake.ui.button(label="Принять вызов!", style=disnake.ButtonStyle.blurple)
-    async def confirm(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        if inter.user.id == self.author.id:
-          await inter.response.send_message('Нельзя принять вызов у самого себя.', ephemeral=True)
-        else:
-          self.value = True
-          self.user = inter.user
-          self.stop()
-        
-    @disnake.ui.button(label="Отменить дуэль", style=disnake.ButtonStyle.red)
-    async def cancel(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-      if inter.user.id == self.author.id:
-        self.value = False
-        self.stop()
-      else:
-        await inter.response.send_message('Отменить дуэль в силах лишь её зачинщик.', ephemeral=True)
 
 def setup(bot: commands.Bot):
     bot.add_cog(Prikol(bot))

@@ -89,7 +89,7 @@ class CogScheduler(commands.Cog):
     async def event_randrole(self):
         print('рандомить так рандомить, меняю цвет daily-роли')
         guild = self.bot.get_guild(305031592068513796)
-        role = guild.get_role(1114655677143601245)
+        role = guild.get_role(1116112092290883704)
         color=int(''.join(random.choices('0123456789abcdef', k=6)), 16)
         await role.edit(color=disnake.Color(color), reason='новый день - новый цвет')
 

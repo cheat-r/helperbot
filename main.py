@@ -16,7 +16,7 @@ class Bot(commands.Bot):
             help_command=None,
             intents=disnake.Intents.all(),
             status=disnake.Status.idle,
-            activity=disnake.CustomActivity(state="[С новым кодом!]", name='Custom Status'),
+            activity=disnake.CustomActivity(state="[Редизайн soon :tm:]", name='Custom Status'),
             reload=True,
             *args,
             **kwargs
