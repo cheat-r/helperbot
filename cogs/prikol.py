@@ -14,6 +14,31 @@ class Prikol(commands.Cog):
     def cog_unload(self):
         print('Ког выгружен: "{}"'.format(self.qualified_name))
 
+    @commands.slash_command(
+    name='verification_create',
+    description='Создаёт сообщение верификации')
+    @commands.default_member_permissions(administrator=True)
+    async def verif(self, ia: disnake.AppCmdInter):
+        await ia.response.defer(ephemeral=True)
+        await ia.channel.send('Спасибо, что дочитали до конца!\nТеперь пора получить роль Рандомовца, с которой вы получите все базовые права. \nНажмите на кнопку, и мы начнём процесс верификации. Не волнуйтесь, *больно не будет*.',
+        components=[
+        disnake.ui.Button(label='Верифицироваться', style=disnake.ButtonStyle.green, emoji='<:whothefu:1068100193192509450>', custom_id='verify')
+        ]
+        )
+        await ia.edit_original_response('Сообщение отправлено.')
+    
+    @commands.Cog.listener('on_button_click')
+    async def btn_listener(self, inter: disnake.MessageInteraction):
+        if inter.component.custom_id == 'verify':
+            if not inter.author.get_role(1014569986968268891):
+              qs = QuestionSelect(question=1)
+              view = disnake.ui.View(timeout=300.0)
+              view.add_item(qs)
+              await inter.response.send_message('Ну, посмотрим чему ты научился.\nЕсли вы не в курсе про разрешённость / запрещённость *определённого действия*, а в правилах про это не написано, что можно и нужно делать?',view=view,ephemeral=True)
+              qs.message = await inter.original_response()
+            else:
+              await inter.response.send_message('Верификация уже пройдена. Нет нужды проходить её ещё раз. <:nikosmile:1161596483691360276> ', ephemeral=True)
+
     @commands.slash_command(description='Дуэль с другим участником забавы ради :)')
     async def duel(self, inter: disnake.ApplicationCommandInteraction ):
         author = inter.author
@@ -173,31 +198,6 @@ class Confirm(disnake.ui.View):
         self.stop()
       else:
         await inter.response.send_message('Отменить игру в силах лишь тот, кто предложил в неё сыграть.', ephemeral=True)
-
-    @commands.slash_command(
-    name='verification_create',
-    description='Создаёт сообщение верификации')
-    @commands.default_member_permissions(administrator=True)
-    async def verif(self, ia: disnake.AppCmdInter):
-        await ia.response.defer(ephemeral=True)
-        await ia.channel.send('Спасибо, что дочитали до конца!\nТеперь пора получить роль Рандомовца, с которой вы получите все базовые права. \nНажмите на кнопку, и мы начнём процесс верификации. Не волнуйтесь, *больно не будет*.',
-        components=[
-        disnake.ui.Button(label='Верифицироваться', style=disnake.ButtonStyle.green, emoji='<:whothefu:1068100193192509450>', custom_id='verify')
-        ]
-        )
-        await ia.edit_original_response('Сообщение отправлено.')
-    
-    @commands.Cog.listener('on_button_click')
-    async def btn_listener(self, inter: disnake.MessageInteraction):
-        if inter.component.custom_id == 'verify':
-            if not inter.author.get_role(1014569986968268891):
-              qs = QuestionSelect(question=1)
-              view = disnake.ui.View(timeout=300.0)
-              view.add_item(qs)
-              await inter.response.send_message('Ну, посмотрим чему ты научился.\nЕсли вы не в курсе про разрешённость / запрещённость *определённого действия*, а в правилах про это не написано, что можно и нужно делать?',view=view,ephemeral=True)
-              qs.message = await inter.original_response()
-            else:
-              await inter.response.send_message('Верификация уже пройдена. Нет нужды проходить её ещё раз. <:nikosmile:1161596483691360276> ', ephemeral=True)
 
 class QuestionSelect(disnake.ui.StringSelect):
     message: disnake.Message = None
