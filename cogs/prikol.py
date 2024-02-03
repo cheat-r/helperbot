@@ -42,85 +42,161 @@ class Prikol(commands.Cog):
     @commands.slash_command(description='Дуэль с другим участником забавы ради :)')
     async def duel(self, inter: disnake.ApplicationCommandInteraction ):
         author = inter.author
-        view = Confirm(author)
-        await inter.response.send_message(f"`{inter.author}` готовится к игре в Револьветку... \nОсмелится ли кто-то принять вызов?", view=view)
-        await view.wait()
+        comview = Confirm(author)
+        await inter.response.send_message(f"`{inter.author}` готовится к игре в Револьветку... \nОсмелится ли кто-то принять вызов?", view=comview)
+        await comview.wait()
         message = await inter.original_message()
-        if view.value is None or view.value is False:
+        if comview.value is None or comview.value is False:
           await message.delete()
         else:
-            view.clear_items()
-            await message.edit(f"`{view.user}` согласился на игру с `{inter.author}`!", view=view)
+            comview.clear_items()
+            await message.edit(f"`{comview.user}` согласился на игру с `{inter.author}`!", view=comview)
             await asyncio.sleep(3)
             dealer = inter.author
-            player = view.user
+            player = comview.user
             health = random.randint(2,6)
-            # health = 1
             dealer_health = health
             player_health = health
+            handcuffed = 0
+            doubled = 0
+            dealer_inv = {
+                "glass": 0, # отображает кол-во патрон в барабане и текущий патрон
+                "beer": 0, # сбрасывает текущий патрон, завершает раунд если барабан пустой
+                "doubler": 0, # удваивает урон на один заряженный выстрел или до конца хода
+                "shield": 0, # принимает на себя одну единицу урона от выстрела (удвоенный патрон нанесёт 1 урон), сбрасывается в начале следующего хода
+                "handcuffs": 0, # пропускает ход оппонента (доп выстрел)
+                "shielded": 0,
+                "total": 0 # лимит предметов, больше 8 штук будет скидываться в мою личную яму >:D
+            }
+            player_inv = {
+                "glass": 0,
+                "beer": 0,
+                "doubler": 0,
+                "shield": 0,
+                "handcuffs": 0,
+                "shielded": 0,
+                "total": 0
+            }
             round = 0
             barrel = []
             turn = random.choice([dealer,player])
             while dealer_health > 0 and player_health > 0:
                 if barrel == []:
-                    for x in range(0,random.randint(0,4)):
-                        barrel.append(random.randint(0,1))
+                    for x in range(0,random.randint(1,4)): # выдача предметов
+                        if dealer_inv['total'] < 8:
+                            dealer_inv[random.choice(['glass','beer','doubler','shield','handcuffs'])] += 1
+                            dealer_inv['total'] += 1
+                        if player_inv['total'] < 8:
+                            player_inv[random.choice(['glass','beer','doubler','shield','handcuffs'])] += 1
+                            player_inv['total'] += 1
+                    for x in range(0,random.randint(0,4)): # зарядка барабана
+                        if barrel.count(1) >= barrel.count(0):
+                            barrel.append(0)
+                        elif barrel.count(0) - barrel.count(1) == 2:
+                            barrel.append(1)
+                        else:
+                            barrel.append(random.randint(0,1))
                     barrel.append(1)
                     barrel.append(0)
                     random.shuffle(barrel)
                     round += 1
+                    if handcuffed:
+                        handcuffed = 0
+                        if turn == player: turn = dealer
+                        else: turn = player
                     await message.edit(f'{barrel.count(1)} патрон(а), {barrel.count(0)} пустой(-ых)')
-                print(barrel)
                 embed = disnake.Embed(color=disnake.Color(0x474896))
                 embed.set_author(name=f'Револьветка - раунд {round}')
-                print(f"{turn}'s turn!")
-                embed.title = f'Ход `{turn}`!'
-                embed.add_field(name=f'Заряды `{dealer}`:',value=('⚡' * dealer_health))
-                embed.add_field(name=f'Заряды `{player}`:',value=('⚡' * player_health))
-                view = Actions(turn,dealer,player)
+                embed.title = f'Ход `{turn}`!'+(' (Выстрел усилен)' if doubled else '')+(' (Оппонент в наручниках)' if handcuffed==2 else '\n(Оппонент в наручниках, но скоро выберется)' if handcuffed==1 else '')
+                embed.add_field(name=f'Заряды `{dealer}`:',value=('⚡' * dealer_health)+('🛡️' if dealer_inv['shielded'] else ''))
+                embed.add_field(name=f'Заряды `{player}`:',value=('⚡' * player_health)+('🛡️' if player_inv['shielded'] else ''))
+                view = Actions(turn,dealer,player,dealer_inv,player_inv,barrel,doubled,handcuffed)
                 await message.edit(embed=embed,view=view)
-                print('waiting for input...')
                 await view.wait()
                 view.clear_items()
                 embed = None
-                if view.value is None:
+                if view.value == 'Timeout':
                     await message.edit(f'Техническое поражение - `{turn}` не среагировал в течении 3-х минут.\nПобеда присуждается `'+(str(dealer) if turn == player else str(player))+'`!',view=view,embed=embed)
                     break
-                elif view.value is False:
+                elif view.value == 'Self':
                     if barrel[0] == 0:
-                        await message.edit(f'{turn} выстрелил в себя... Повезло, это был пустой.',view=view)
+                        await message.edit(f'{turn} выстрелил в себя...\nЭто был пустой, идём дальше.',view=view)
                     elif barrel[0] == 1:
-                        await message.edit(f'{turn} выстрелил в себя... Упс! Кажется у кого-то теперь дырка в голове.',view=view)
+                        await message.edit(f'{turn} выстрелил в себя...\n💀 <- молодец, дебил, попал!',view=view)
                         if turn == dealer:
-                            dealer_health -= 1
-                            turn = player
+                            dealer_health -= (1 + doubled - dealer_inv['shielded'])
+                            dealer_inv['shielded'] = 0
+                            player_inv['shielded'] = 0
+                            if handcuffed:
+                                handcuffed -= 1
+                                if not handcuffed: turn = player
+                            else: turn = player
                         elif turn == player:
-                            player_health -= 1
-                            turn = dealer
+                            player_health -= (1 + doubled - player_inv['shielded'])
+                            dealer_inv['shielded'] = 0
+                            player_inv['shielded'] = 0
+                            if handcuffed:
+                                handcuffed -= 1
+                                if not handcuffed: turn = dealer
+                            else: turn = dealer
+                        doubled = 0
                     barrel.pop(0)
-                elif view.value is True:
+                elif view.value == 'Opposite':
                     if barrel[0] == 0:
-                        await message.edit(f'{turn} выстрелил в оппонента... Это оказался пустой. Не повезло! (или повезло?)',view=view)
+                        await message.edit(f'{turn} выстрелил в оппонента..?\nХотя нет, не выстрелил. Это был пустой.',view=view)
                         if turn == dealer:
-                            turn = player
+                            player_inv['shielded'] = 0
+                            if handcuffed:
+                                handcuffed -= 1
+                                if not handcuffed: turn = player
+                            else: turn = player
                         elif turn == player:
-                            turn = dealer
+                            dealer_inv['shielded'] = 0
+                            if handcuffed:
+                                handcuffed -= 1
+                                if not handcuffed: turn = dealer
+                            else: turn = dealer
+                        doubled = 0
                     elif barrel[0] == 1:
-                        await message.edit(f'{turn} выстрелил в оппонента... Ух! Попал, да ещё как!',view=view)
+                        await message.edit(f'{turn} выстрелил в оппонента... 💥\nУпс. Оно само, честно.',view=view)
                         if turn == dealer:
-                            player_health -= 1
-                            turn = player
+                            player_health -= (1 + doubled - player_inv['shielded'])
+                            player_inv['shielded'] = 0
+                            if handcuffed:
+                                handcuffed -= 1
+                                if not handcuffed: turn = player
+                            else: turn = player
                         elif turn == player:
-                            dealer_health -= 1
-                            turn = dealer
+                            dealer_health -= (1 + doubled - dealer_inv['shielded'])
+                            dealer_inv['shielded'] = 0
+                            if handcuffed:
+                                handcuffed -= 1
+                                if not handcuffed: turn = dealer
+                            else: turn = dealer
+                        doubled = 0
                     barrel.pop(0)
+                elif view.value == 'Beer':
+                    await message.edit(f'{turn} сделал "контрольный" выстрел.\n\n'+('Он оказался заряженный. Страшно.' if barrel[0]==1 else 'Выстрел не произошёл. Всё ещё страшно.'),view=view)
+                    barrel.pop(0)
+                elif view.value == 'Doubler':
+                    doubled = 1
+                    await message.edit(f'{turn} удвоил урон следующего выстрела!',view=view)
+                elif view.value == 'Shield':
+                    if turn == dealer:
+                        dealer_inv['shielded'] = 1
+                    elif turn == player:
+                        player_inv['shielded'] = 1
+                    await message.edit(f'{turn} перестраховался щитом!',view=view)
+                elif view.value == 'Handcuffs':
+                    handcuffed = 2
+                    await message.edit(f'{turn} нацепил наручники на своего оппонента!',view=view)
                 await asyncio.sleep(3)
             view.clear_items()
             embed = None
             if dealer_health == 0:
-                await message.edit(f'`{player}` обыграл `{dealer}` с {player_health} ХП в запасе! (Начальный лимит - {health})',view=view,embed=embed)
+                await message.edit(f'`{player}` обыграл `{dealer}` на {round}-ом раунде с {player_health} HP в запасе! (при начальном лимите в {health})',view=view,embed=embed)
             elif player_health == 0:
-                await message.edit(f'`{dealer}` обыграл `{player}` с {dealer_health} ХП в запасе! (Начальный лимит - {health})',view=view,embed=embed)
+                await message.edit(f'`{dealer}` обыграл `{player}` на {round}-ом раунде с {dealer_health} ХП в запасе! (при начальном лимите в {health})',view=view,embed=embed)
 
 class Shoot(disnake.ui.View):
     def __init__(self):
@@ -137,14 +213,48 @@ class Shoot(disnake.ui.View):
         self.value = False
         self.stop()
 
+class Use(disnake.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60.0)
+        self.value: Optional[str] = None
+
+    @disnake.ui.button(label="Стекло", style=disnake.ButtonStyle.gray)
+    async def glass(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.value = 'glass'
+        self.stop()
+    
+    @disnake.ui.button(label="Пиво", style=disnake.ButtonStyle.gray)
+    async def beer(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.value = 'beer'
+        self.stop()
+    
+    @disnake.ui.button(label="Удвоитель", style=disnake.ButtonStyle.gray)
+    async def doubler(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.value = 'doubler'
+        self.stop()
+    
+    @disnake.ui.button(label="Щит", style=disnake.ButtonStyle.gray)
+    async def shield(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.value = 'shield'
+        self.stop()
+    
+    @disnake.ui.button(label="Наручники", style=disnake.ButtonStyle.gray)
+    async def handcuffs(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.value = 'handcuffs'
+        self.stop()
+
 class Actions(disnake.ui.View):
-    def __init__(self,turn,dealer,player):
+    def __init__(self,turn,dealer,player,dealer_inv,player_inv,barrel,doubled,handcuffed):
         self.turn = turn
         self.dealer = dealer
         self.player = player
+        self.dealer_inv = dealer_inv
+        self.player_inv = player_inv
+        self.barrel = barrel
+        self.doubled = doubled
+        self.handcuffed = handcuffed
         super().__init__(timeout=180.0)
-        self.value: Optional[bool] = None
-        self.user: Optional[int] = None
+        self.value: Optional[str] = 'Timeout'
 
     @disnake.ui.button(label="Выстрелить!", style=disnake.ButtonStyle.red)
     async def shoot(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
@@ -153,8 +263,8 @@ class Actions(disnake.ui.View):
           await inter.response.send_message('Куда стрелять будем?',view=view,ephemeral=True)
           await view.wait()
           if view.value is not None:
-            if view.value == False: self.value = False
-            if view.value == True: self.value = True
+            if view.value == False: self.value = 'Self'
+            if view.value == True: self.value = 'Opposite'
             message = await inter.original_message()
             await message.delete()
             self.stop()
@@ -164,16 +274,170 @@ class Actions(disnake.ui.View):
             else:
                 await inter.response.send_message('Вы не участвуете в игре.', ephemeral=True)
     
-#    @disnake.ui.button(label="Использовать предмет", style=disnake.ButtonStyle.blurple)
-#    async def inv_check(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-#       
-#    @disnake.ui.button(label="Просмотреть инвентарь", style=disnake.ButtonStyle.gray)
-#    async def inv_check(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-#      if inter.user.id == self.author.id:
-#        self.value = False
-#        self.stop()
-#      else:
-#        await inter.response.send_message('Отменить игру в силах лишь тот, кто предложил в неё сыграть.', ephemeral=True)
+    @disnake.ui.button(label="Использовать предмет", style=disnake.ButtonStyle.gray)
+    async def inv_use(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        if inter.user == self.turn:
+          if inter.user == self.dealer:
+                if self.dealer_inv['total'] == 0:
+                    await inter.response.send_message('Инвентарь пуст, использовать нечего. <:HUH:1187112357541974077>',ephemeral=True)
+                else:
+                    inv = self.dealer_inv
+                    view = Use()
+                    embed = disnake.Embed(color=disnake.Color(0x474896))
+                    embed.add_field(name=f'Стекло ({self.dealer_inv["glass"]} шт.)',value='Отображает кол-во патрон в барабане и **текущий патрон**',inline=False)
+                    embed.add_field(name=f'Пиво ({self.dealer_inv["beer"]} шт.)',value='Сбрасывает текущий патрон, завершает раунд если барабан пустой',inline=False)
+                    embed.add_field(name=f'Удвоитель ({self.dealer_inv["doubler"]} шт.)',value='Удваивает урон на один заряженный выстрел или до конца хода'+(' [Применён]' if self.doubled else ''),inline=False)
+                    embed.add_field(name=f'Щит ({self.dealer_inv["shield"]} шт.)',value='Принимает на себя одну единицу урона от выстрела (удвоенный патрон нанесёт 1 урон), сбрасывается в начале следующего хода',inline=False)
+                    embed.add_field(name=f'Наручники ({self.dealer_inv["handcuffs"]} шт.)',value='Пропускает ход оппонента',inline=False)
+                    await inter.response.send_message('Что использовать?',embed=embed,view=view,ephemeral=True)
+                    message = await inter.original_message()
+                    await view.wait()
+                    view.clear_items()
+                    embed = None
+                    if view.value is None:
+                        await message.delete()
+                    elif self.dealer_inv[view.value] == 0:
+                        await message.edit('У вас нет этого предмета.',view=view,embed=embed)
+                    else:
+                        if view.value == 'glass':
+                            await message.edit(f'{self.barrel.count(1)} патрон(а), {self.barrel.count(0)} пустой(-ых)\n\nСейчас заряжен '+('**пустой**.' if self.barrel[0] == 0 else '**патрон**.'),view=view,embed=embed)
+                        if view.value == 'beer':
+                            self.value = 'Beer'
+                            await message.delete()
+                            self.stop()
+                        if view.value == 'doubler':
+                            if self.doubled:
+                                await message.edit('Урон уже удвоен!',view=view,embed=embed)
+                                self.dealer_inv[view.value] += 1
+                                self.dealer_inv['total'] += 1
+                            else:
+                                self.value = 'Doubler'
+                                await message.delete()
+                                self.stop()
+                        if view.value == 'shield':
+                            if self.dealer_inv['shielded']:
+                                await message.edit('Вы уже под щитом!',view=view,embed=embed)
+                                self.dealer_inv[view.value] += 1
+                                self.dealer_inv['total'] += 1
+                            else:
+                                self.value = 'Shield'
+                                await message.delete()
+                                self.stop()
+                        if view.value == 'handcuffs':
+                            if self.handcuffed:
+                                await message.edit('Оппонент уже в наручниках!',view=view,embed=embed)
+                                self.dealer_inv[view.value] += 1
+                                self.dealer_inv['total'] += 1
+                            else:
+                                self.value = 'Handcuffs'
+                                await message.delete()
+                                self.stop()
+                        self.dealer_inv[view.value] -= 1
+                        self.dealer_inv['total'] -= 1
+
+          if inter.user == self.player:
+                if self.player_inv['total'] == 0:
+                    await inter.response.send_message('Инвентарь пуст, использовать нечего. <:HUH:1187112357541974077>',ephemeral=True)
+                else:
+                    inv = self.player_inv
+                    view = Use()
+                    embed = disnake.Embed(color=disnake.Color(0x474896))
+                    embed.add_field(name=f'Стекло ({self.player_inv["glass"]} шт.)',value='Отображает кол-во патрон в барабане и **текущий патрон**',inline=False)
+                    embed.add_field(name=f'Пиво ({self.player_inv["beer"]} шт.)',value='Сбрасывает текущий патрон, завершает раунд если барабан пустой',inline=False)
+                    embed.add_field(name=f'Удвоитель ({self.player_inv["doubler"]} шт.)',value='Удваивает урон на один заряженный выстрел или до конца хода',inline=False)
+                    embed.add_field(name=f'Щит ({self.player_inv["shield"]} шт.)',value='Принимает на себя одну единицу урона от выстрела (удвоенный патрон нанесёт 1 урон), сбрасывается в начале следующего хода',inline=False)
+                    embed.add_field(name=f'Наручники ({self.player_inv["handcuffs"]} шт.)',value='Пропускает ход оппонента',inline=False)
+                    await inter.response.send_message('Что использовать?',embed=embed,view=view,ephemeral=True)
+                    message = await inter.original_message()
+                    await view.wait()
+                    view.clear_items()
+                    embed = None
+                    if view.value is None:
+                        await message.delete()
+                    elif self.player_inv[view.value] == 0:
+                        await message.edit('У вас нет этого предмета.',view=view,embed=embed)
+                    else:
+                        if view.value == 'glass':
+                            await message.edit(f'{self.barrel.count(1)} патрон(а), {self.barrel.count(0)} пустой(-ых)\n\nСейчас заряжен '+('пустой.' if self.barrel[0] == 0 else 'патрон.'),view=view,embed=embed)
+                        if view.value == 'beer':
+                            self.value = 'Beer'
+                            await message.delete()
+                            self.stop()
+                        if view.value == 'doubler':
+                            if self.doubled:
+                                await message.edit('Урон уже удвоен!',view=view,embed=embed)
+                                self.player_inv[view.value] += 1
+                                self.player_inv['total'] += 1
+                            else:
+                                self.value = 'Doubler'
+                                await message.delete()
+                                self.stop()
+                        if view.value == 'shield':
+                            if self.player_inv['shielded']:
+                                await message.edit('Вы уже под щитом!',view=view,embed=embed)
+                                self.player_inv[view.value] += 1
+                                self.player_inv['total'] += 1
+                            else:
+                                self.value = 'Shield'
+                                await message.delete()
+                                self.stop()
+                        if view.value == 'handcuffs':
+                            if self.handcuffed:
+                                await message.edit('Оппонент уже в наручниках!',view=view,embed=embed)
+                                self.player_inv[view.value] += 1
+                                self.player_inv['total'] += 1
+                            else:
+                                self.value = 'Handcuffs'
+                                await message.delete()
+                                self.stop()
+                        self.player_inv[view.value] -= 1
+                        self.player_inv['total'] -= 1
+        else:
+            if inter.user == self.dealer:
+                embed = disnake.Embed(color=disnake.Color(0x474896))
+                embed.add_field(name=f'Стекло ({self.dealer_inv["glass"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Пиво ({self.dealer_inv["beer"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Удвоитель ({self.dealer_inv["doubler"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Щит ({self.dealer_inv["shield"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Наручники ({self.dealer_inv["handcuffs"]} шт.)',value='',inline=False)
+                await inter.response.send_message('Сейчас не ваш ход, но на свой инвентарь посмотреть вы можете:',embed=embed,ephemeral=True)
+            if inter.user == self.player:
+                embed = disnake.Embed(color=disnake.Color(0x474896))
+                embed.add_field(name=f'Стекло ({self.player_inv["glass"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Пиво ({self.player_inv["beer"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Удвоитель ({self.player_inv["doubler"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Щит ({self.player_inv["shield"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Наручники ({self.player_inv["handcuffs"]} шт.)',value='',inline=False)
+                await inter.response.send_message('Сейчас не ваш ход, но на свой инвентарь посмотреть вы можете:',embed=embed,ephemeral=True)
+            else:
+                await inter.response.send_message('Вы не участвуете в игре.', ephemeral=True)
+       
+    @disnake.ui.button(label="Инвентарь оппонента", style=disnake.ButtonStyle.blurple)
+    async def inv_opponent(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        if inter.user == self.dealer:
+            if self.player_inv['total'] == 0:
+                await inter.response.send_message('Инвентарь оппонента пуст.',ephemeral=True)
+            else:
+                embed = disnake.Embed(color=disnake.Color(0x474896))
+                embed.add_field(name=f'Стекло ({self.player_inv["glass"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Пиво ({self.player_inv["beer"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Удвоитель ({self.player_inv["doubler"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Щит ({self.player_inv["shield"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Наручники ({self.player_inv["handcuffs"]} шт.)',value='',inline=False)
+                await inter.response.send_message('**Инвентарь оппонента:**',embed=embed,ephemeral=True)
+        elif inter.user == self.player:
+            if self.dealer_inv['total'] == 0:
+                await inter.response.send_message('Инвентарь оппонента пуст.',ephemeral=True)
+            else:
+                embed = disnake.Embed(color=disnake.Color(0x474896))
+                embed.add_field(name=f'Стекло ({self.dealer_inv["glass"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Пиво ({self.dealer_inv["beer"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Удвоитель ({self.dealer_inv["doubler"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Щит ({self.dealer_inv["shield"]} шт.)',value='',inline=False)
+                embed.add_field(name=f'Наручники ({self.dealer_inv["handcuffs"]} шт.)',value='',inline=False)
+                await inter.response.send_message('**Инвентарь оппонента:**',embed=embed,ephemeral=True)
+        else:
+            await inter.response.send_message('Вы не участвуете в игре.', ephemeral=True)
 
 class Confirm(disnake.ui.View):
     def __init__(self, author):
