@@ -39,11 +39,31 @@ class Prikol(commands.Cog):
             else:
               await inter.response.send_message('Верификация уже пройдена. Нет нужды проходить её ещё раз. <:nikosmile:1161596483691360276> ', ephemeral=True)
 
-    @commands.slash_command(description='Дуэль с другим участником забавы ради :)')
-    async def duel(self, inter: disnake.ApplicationCommandInteraction ):
+    @commands.slash_command(description='Игра в Револьветку с другим участником. Перенос Buckshot Roulette прямо к вам в чат!', options=[
+        disnake.Option('duel_member', 'Бросить вызов определённому участнику! Оставьте пустым, чтобы любой участник мог принять вызов', disnake.OptionType.user),
+        disnake.Option('starting_hp', 'Начальное кол-во зарядов (рандомизировано если не уточнено)', disnake.OptionType.integer, min_value=2, max_value=6),
+        disnake.Option('items_per_round', 'Кол-во предметов за раунд (0 отключает предметы, оставьте пустым для рандомизации)', disnake.OptionType.integer, min_value=0, max_value=4),
+        disnake.Option('bullets_per_round', 'Кол-во патрон в обойме за раунд, оставьте пустым для рандомизации', disnake.OptionType.integer, min_value=2, max_value=8)
+    ])
+    async def duel(self, inter: disnake.ApplicationCommandInteraction, duel_member: disnake.User = None, starting_hp: int = None, items_per_round: int = None, bullets_per_round: int = None):
+        if duel_member:
+            if duel_member == inter.author:
+                await inter.response.send_message('Чё, самый умный нашёлся? Нельзя бросить вызов самому себе.',ephemeral=True)
+            elif duel_member.bot:
+                await inter.response.send_message('К сожалению (или к счастью), с ботами нельзя дуэлиться. Пожалуйста, выберите живого участника.',ephemeral=True)
         author = inter.author
-        comview = Confirm(author)
-        await inter.response.send_message(f"`{inter.author}` готовится к игре в Револьветку... \nОсмелится ли кто-то принять вызов?", view=comview)
+        comview = Confirm(author,duel_member)
+        embed = disnake.Embed(color=disnake.Color(0x474896))
+        embed.set_author(name='Кастомные правила')
+        if starting_hp:
+            embed.add_field(name='Начальное кол-во зарядов:',value=str(starting_hp))
+        if items_per_round != None:
+            embed.add_field(name='Кол-во предметов за раунд:',value='[Предметы отключены]' if items_per_round == 0 else str(items_per_round))
+        if bullets_per_round:
+            embed.add_field(name='Кол-во патронов за раунд:',value=str(bullets_per_round))
+        if not starting_hp and items_per_round is None and not bullets_per_round:
+            embed.add_field(name='Ванильная игра!',value='Хост не установил кастомных правил, всё будет рандомизировано как при бесконечном режиме.')
+        await inter.response.send_message((f'{inter.author} бросил вызов {duel_member}!\nОсмелится ли он принять вызов?' if duel_member else f"`{inter.author}` готовится к дуэли...\nОсмелится ли кто-то принять вызов?"), view=comview, embed=embed)
         await comview.wait()
         message = await inter.original_message()
         if comview.value is None or comview.value is False:
@@ -54,7 +74,8 @@ class Prikol(commands.Cog):
             await asyncio.sleep(3)
             dealer = inter.author
             player = comview.user
-            health = random.randint(2,6)
+            if starting_hp: health = starting_hp
+            else: health = random.randint(2,6)
             dealer_health = health
             player_health = health
             handcuffed = 0
@@ -82,15 +103,23 @@ class Prikol(commands.Cog):
             turn = random.choice([dealer,player])
             while dealer_health > 0 and player_health > 0:
                 if barrel == []:
-                    for x in range(0,random.randint(1,4)): # выдача предметов
+                    if bullets_per_round:
+                        reload = bullets_per_round - 2
+                    else:
+                        reload = random.randint(0,4)
+                    if items_per_round != None:
+                        items = items_per_round
+                    else:
+                        items = random.randint(1,4)
+                    for x in range(items): # выдача предметов
                         if dealer_inv['total'] < 8:
                             dealer_inv[random.choice(['glass','beer','doubler','shield','handcuffs'])] += 1
                             dealer_inv['total'] += 1
                         if player_inv['total'] < 8:
                             player_inv[random.choice(['glass','beer','doubler','shield','handcuffs'])] += 1
                             player_inv['total'] += 1
-                    for x in range(0,random.randint(0,4)): # зарядка барабана
-                        if barrel.count(1) >= barrel.count(0):
+                    for x in range(reload): # зарядка барабана
+                        if barrel.count(1) > barrel.count(0):
                             barrel.append(0)
                         elif barrel.count(0) - barrel.count(1) == 2:
                             barrel.append(1)
@@ -116,6 +145,15 @@ class Prikol(commands.Cog):
                 view.clear_items()
                 embed = None
                 if view.value == 'Timeout':
+                    embed = disnake.Embed(color=disnake.Color(0x474896))
+                    embed.set_author(name='Циферки ради интереса...')
+                    embed.add_field(name=f'Статистика `{dealer}`:',value=f'Зярядов: {dealer_health}\nПредметов: {dealer_inv["total"]}')
+                    embed.add_field(name=f'Статистика `{player}`:',value=f'Зярядов: {player_health}\nПредметов: {player_inv["total"]}')
+                    embed.add_field(name='Начальное кол-во зарядов:',value=str(health),inline=False)
+                    if items_per_round != None:
+                        embed.add_field(name='Кол-во предметов за раунд:',value='[Предметы отключены]' if items_per_round == 0 else str(items_per_round))
+                    if bullets_per_round:
+                        embed.add_field(name='Кол-во патронов за раунд:',value=str(bullets_per_round))
                     await message.edit(f'Техническое поражение - `{turn}` не среагировал в течении 3-х минут.\nПобеда присуждается `'+(str(dealer) if turn == player else str(player))+'`!',view=view,embed=embed)
                     break
                 elif view.value == 'Self':
@@ -192,11 +230,23 @@ class Prikol(commands.Cog):
                     await message.edit(f'{turn} нацепил наручники на своего оппонента!',view=view)
                 await asyncio.sleep(3)
             view.clear_items()
-            embed = None
+            embed = disnake.Embed(color=disnake.Color(0x474896))
+            embed.set_author(name='Кастомные правила игры')
+            if starting_hp:
+                embed.add_field(name='Начальное кол-во зарядов:',value=str(starting_hp))
+            if items_per_round != None:
+                embed.add_field(name='Кол-во предметов за раунд:',value='[Предметы отключены]' if items_per_round == 0 else str(items_per_round))
+            if bullets_per_round:
+                embed.add_field(name='Кол-во патронов за раунд:',value=str(bullets_per_round))
+            if not starting_hp and items_per_round is None and not bullets_per_round:
+                embed = None
+            if round == 3:
+                round = str(round) + '-ем'
+            else: round = str(round) + '-ом'
             if dealer_health == 0:
-                await message.edit(f'`{player}` обыграл `{dealer}` на {round}-ом раунде с {player_health} HP в запасе! (при начальном лимите в {health})',view=view,embed=embed)
+                await message.edit(f'`{player}` обыграл `{dealer}` на {round} раунде с {player_health} HP в запасе!',view=view,embed=embed)
             elif player_health == 0:
-                await message.edit(f'`{dealer}` обыграл `{player}` на {round}-ом раунде с {dealer_health} ХП в запасе! (при начальном лимите в {health})',view=view,embed=embed)
+                await message.edit(f'`{dealer}` обыграл `{player}` на {round} раунде с {dealer_health} HP в запасе!',view=view,embed=embed)
 
 class Shoot(disnake.ui.View):
     def __init__(self):
@@ -440,16 +490,19 @@ class Actions(disnake.ui.View):
             await inter.response.send_message('Вы не участвуете в игре.', ephemeral=True)
 
 class Confirm(disnake.ui.View):
-    def __init__(self, author):
+    def __init__(self, author, duel_member):
         self.author = author
+        self.duel_member = duel_member
         super().__init__(timeout=60.0)
         self.value: Optional[bool] = None
         self.user: Optional[int] = None
 
-    @disnake.ui.button(label="Присоединиться к игре", style=disnake.ButtonStyle.blurple)
+    @disnake.ui.button(label="Принять вызов!", style=disnake.ButtonStyle.blurple)
     async def confirm(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
         if inter.user.id == self.author.id:
           await inter.response.send_message('Нельзя присоединиться к самому себе.', ephemeral=True)
+        elif self.duel_member and inter.user != self.duel_member:
+            await inter.response.send_message('Вы не можете принять чужой вызов.', ephemeral=True)
         else:
           self.value = True
           self.user = inter.user
