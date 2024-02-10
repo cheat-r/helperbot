@@ -18,14 +18,14 @@ class Prikol(commands.Cog):
     name='verification_create',
     description='Создаёт сообщение верификации')
     @commands.default_member_permissions(administrator=True)
-    async def verif(self, ia: disnake.AppCmdInter):
-        await ia.response.defer(ephemeral=True)
-        await ia.channel.send('Спасибо, что дочитали до конца!\nТеперь пора получить роль Рандомовца, с которой вы получите все базовые права. \nНажмите на кнопку, и мы начнём процесс верификации. Не волнуйтесь, *больно не будет*.',
+    async def verif(self, inter: disnake.AppCmdInter):
+        await inter.response.defer(ephemeral=True)
+        await inter.channel.send('Спасибо, что дочитали до конца!\nТеперь пора получить роль Рандомовца, с которой вы получите все базовые права. \nНажмите на кнопку, и мы начнём процесс верификации. Не волнуйтесь, *больно не будет*.',
         components=[
         disnake.ui.Button(label='Верифицироваться', style=disnake.ButtonStyle.green, emoji='<:whothefu:1068100193192509450>', custom_id='verify')
         ]
         )
-        await ia.edit_original_response('Сообщение отправлено.')
+        await inter.edit_original_response('Сообщение отправлено.')
     
     @commands.Cog.listener('on_button_click')
     async def btn_listener(self, inter: disnake.MessageInteraction):
@@ -129,6 +129,8 @@ class Prikol(commands.Cog):
                     barrel.append(0)
                     random.shuffle(barrel)
                     round += 1
+                    if doubled:
+                        doubled = 0
                     if handcuffed:
                         handcuffed = 0
                         if turn == player: turn = dealer
@@ -214,7 +216,7 @@ class Prikol(commands.Cog):
                         doubled = 0
                     barrel.pop(0)
                 elif view.value == 'Beer':
-                    await message.edit(f'{turn} сделал "контрольный" выстрел.\n\n'+('Он оказался заряженный. Страшно.' if barrel[0]==1 else 'Выстрел не произошёл. Всё ещё страшно.'),view=view)
+                    await message.edit(f'{turn} сделал "контрольный" выстрел.\n\n'+('Пуля полетела прямо в стену. Страшно.' if barrel[0]==1 else 'Выстрел не произошёл. Всё ещё страшно.'),view=view)
                     barrel.pop(0)
                 elif view.value == 'Doubler':
                     doubled = 1
@@ -408,7 +410,7 @@ class Actions(disnake.ui.View):
                         await message.edit('У вас нет этого предмета.',view=view,embed=embed)
                     else:
                         if view.value == 'glass':
-                            await message.edit(f'{self.barrel.count(1)} патрон(а), {self.barrel.count(0)} пустой(-ых)\n\nСейчас заряжен '+('пустой.' if self.barrel[0] == 0 else 'патрон.'),view=view,embed=embed)
+                            await message.edit(f'{self.barrel.count(1)} патрон(а), {self.barrel.count(0)} пустой(-ых)\n\nСейчас заряжен '+('**пустой**.' if self.barrel[0] == 0 else '**патрон**.'),view=view,embed=embed)
                         if view.value == 'beer':
                             self.value = 'Beer'
                             await message.delete()
@@ -553,9 +555,9 @@ class QuestionSelect(disnake.ui.StringSelect):
             options=options
         )
 
-    async def callback(self, ia: disnake.MessageInteraction):
+    async def callback(self, inter: disnake.MessageInteraction):
         if self.question == 1:
-            if ia.values[0] == 'q1_a3':
+            if inter.values[0] == 'q1_a3':
                 self.score += 1
 
             qs = QuestionSelect(question=2)
@@ -564,12 +566,12 @@ class QuestionSelect(disnake.ui.StringSelect):
             view = disnake.ui.View()
             view.add_item(qs)
             try:
-                await ia.send()
+                await inter.send()
             except Exception:
                 pass
             await self.message.edit('Вы видите, что в чате начался сущий кошмар: участники оскорбляют друг друга, матерятся, да и вообще не соблюдают интернет-манеры! \nЧто нужно сделать **в первую очередь**?', view=view)
         elif self.question == 2:
-            if ia.values[0] == 'q2_a1':
+            if inter.values[0] == 'q2_a1':
                 self.score += 1
 
             qs = QuestionSelect(question=3)
@@ -578,22 +580,22 @@ class QuestionSelect(disnake.ui.StringSelect):
             view = disnake.ui.View()
             view.add_item(qs)
             try:
-                await ia.send()
+                await inter.send()
             except Exception:
                 pass
             await self.message.edit('Самое полезное и лучшее правило (по вашему скромному мнению)?', view=view)
         elif self.question == 3:
-            if ia.values[0] != 'q3_a1':
+            if inter.values[0] != 'q3_a1':
                 self.score += 1
 
             try:
-                await ia.send()
+                await inter.send()
             except Exception:
                 pass
 
             if self.score >= 2:
-                role = ia.guild.get_role(1014569986968268891)
-                await ia.author.add_roles(role)
+                role = inter.guild.get_role(1014569986968268891)
+                await inter.author.add_roles(role)
                 await self.message.edit(':ballot_box_with_check: Поздравляю с прохождением верификации! Теперь ты полноценный член нашего рандомного общества. Приятного общения!', view=None)
             else:
                 await self.message.edit(':x: Где-то вы ошиблись. Попробуйте ещё раз. <:nikoeepy:1181309167152136264>', view=None)

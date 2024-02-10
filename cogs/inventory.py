@@ -19,28 +19,28 @@ class Inventory(commands.Cog):
     options=[
       disnake.Option('member', 'Участник, в чьи карманы необходимо залезть', disnake.OptionType.user, False),
     ])
-  async def inventory(self, ia: disnake.AppCmdInter, member: disnake.User = None):
-    if member == None or member == ia.author:
-      self.bot.add_user_to_db(ia.author.id)
+  async def inventory(self, inter: disnake.AppCmdInter, member: disnake.User = None):
+    if member == None or member == inter.author:
+      self.bot.add_user_to_db(inter.author.id)
       items=self.bot.db
-      user=str(ia.author.id)
+      user=str(inter.author.id)
       dropdown = InvDropdown(items, user)
       view = disnake.ui.View(timeout=None)
       view.add_item(dropdown)
       embed = disnake.Embed(color=disnake.Color(0x474896))
-      embed.set_author(name=f'Инвентарь {ia.author.display_name}', icon_url=ia.author.display_avatar)  
-      for i in self.bot.db['members'][str(ia.author.id)]['inventory']:
-        embed.add_field(name=str(self.bot.db['items'][str(i)]['name'])+' ('+str(self.bot.db['members'][str(ia.author.id)]['inventory'][str(i)])+' шт.)', value=str(self.bot.db['items'][str(i)]['description']), inline=False)
-      if not self.bot.db['members'][str(ia.author.id)]['inventory']:
+      embed.set_author(name=f'Инвентарь {inter.author.display_name}', icon_url=inter.author.display_avatar)  
+      for i in self.bot.db['members'][str(inter.author.id)]['inventory']:
+        embed.add_field(name=str(self.bot.db['items'][str(i)]['name'])+' ('+str(self.bot.db['members'][str(inter.author.id)]['inventory'][str(i)])+' шт.)', value=str(self.bot.db['items'][str(i)]['description']), inline=False)
+      if not self.bot.db['members'][str(inter.author.id)]['inventory']:
         embed.add_field(name='...мда, пустовато.', value='Хотя это поправимо. Советую закупиться в магазине.', inline=False)
-        await ia.response.send_message(embed=embed, ephemeral=True)
+        await inter.response.send_message(embed=embed, ephemeral=True)
       else:
-        await ia.response.send_message(embed=embed, view=view, ephemeral=True)
+        await inter.response.send_message(embed=embed, view=view, ephemeral=True)
     else:
       if member.bot:
-        await ia.response.send_message('Это бот, а не участник. Пожалуйста, выберите кого-нибудь поодушевлённее.',ephemeral=True)
+        await inter.response.send_message('Это бот, а не участник. Пожалуйста, выберите кого-нибудь поодушевлённее.',ephemeral=True)
       elif not str(member.id) in self.bot.db['members'].keys():
-        await ia.response.send_message('Участника нет в датабазе. Как вы могли такое допустить?!',ephemeral=True)
+        await inter.response.send_message('Участника нет в датабазе. Как вы могли такое допустить?!',ephemeral=True)
       else:
         items=self.bot.db
         user=str(member.id)
@@ -50,30 +50,30 @@ class Inventory(commands.Cog):
           embed.add_field(name=str(self.bot.db['items'][str(i)]['name'])+' ('+str(self.bot.db['members'][str(member.id)]['inventory'][str(i)])+' шт.)', value=str(self.bot.db['items'][str(i)]['description']), inline=False)
         if not self.bot.db['members'][str(member.id)]['inventory']:
           embed.add_field(name='...мда, пустовато.', value='Даже посмотреть не на что.', inline=False)
-        await ia.response.send_message(embed=embed, ephemeral=True)
+        await inter.response.send_message(embed=embed, ephemeral=True)
   @commands.user_command(name="Глянуть инвентарь")
-  async def ctx_inventory(self, ia: disnake.AppCmdInter, member: disnake.User):
-    if member == ia.author:
-      self.bot.add_user_to_db(ia.author.id)
+  async def ctx_inventory(self, inter: disnake.AppCmdInter, member: disnake.User):
+    if member == inter.author:
+      self.bot.add_user_to_db(inter.author.id)
       items=self.bot.db
-      user=str(ia.author.id)
+      user=str(inter.author.id)
       dropdown = InvDropdown(items, user)
       view = disnake.ui.View(timeout=None)
       view.add_item(dropdown)
       embed = disnake.Embed(color=disnake.Color(0x474896))
-      embed.set_author(name=f'Инвентарь {ia.author.display_name}', icon_url=ia.author.display_avatar)  
-      for i in self.bot.db['members'][str(ia.author.id)]['inventory']:
-        embed.add_field(name=str(self.bot.db['items'][str(i)]['name'])+' ('+str(self.bot.db['members'][str(ia.author.id)]['inventory'][str(i)])+' шт.)', value=str(self.bot.db['items'][str(i)]['description']), inline=False)
-      if not self.bot.db['members'][str(ia.author.id)]['inventory']:
+      embed.set_author(name=f'Инвентарь {inter.author.display_name}', icon_url=inter.author.display_avatar)  
+      for i in self.bot.db['members'][str(inter.author.id)]['inventory']:
+        embed.add_field(name=str(self.bot.db['items'][str(i)]['name'])+' ('+str(self.bot.db['members'][str(inter.author.id)]['inventory'][str(i)])+' шт.)', value=str(self.bot.db['items'][str(i)]['description']), inline=False)
+      if not self.bot.db['members'][str(inter.author.id)]['inventory']:
         embed.add_field(name='...мда, пустовато.', value='Хотя это поправимо. Советую закупиться в магазине.', inline=False)
-        await ia.response.send_message(embed=embed, ephemeral=True)
+        await inter.response.send_message(embed=embed, ephemeral=True)
       else:
-        await ia.response.send_message(embed=embed, view=view, ephemeral=True)
+        await inter.response.send_message(embed=embed, view=view, ephemeral=True)
     else:
       if member.bot:
-        await ia.response.send_message('Это бот, а не участник. Пожалуйста, выберите кого-нибудь поодушевлённее.',ephemeral=True)
+        await inter.response.send_message('Это бот, а не участник. Пожалуйста, выберите кого-нибудь поодушевлённее.',ephemeral=True)
       elif not str(member.id) in self.bot.db['members'].keys():
-        await ia.response.send_message('Участника нет в датабазе. Как вы могли такое допустить?!',ephemeral=True)
+        await inter.response.send_message('Участника нет в датабазе. Как вы могли такое допустить?!',ephemeral=True)
       else:
         items=self.bot.db
         user=str(member.id)
@@ -83,11 +83,11 @@ class Inventory(commands.Cog):
           embed.add_field(name=str(self.bot.db['items'][str(i)]['name'])+' ('+str(self.bot.db['members'][str(member.id)]['inventory'][str(i)])+' шт.)', value=str(self.bot.db['items'][str(i)]['description']), inline=False)
         if not self.bot.db['members'][str(member.id)]['inventory']:
           embed.add_field(name='...мда, пустовато.', value='Даже посмотреть не на что.', inline=False)
-        await ia.response.send_message(embed=embed, ephemeral=True)
+        await inter.response.send_message(embed=embed, ephemeral=True)
 
   @commands.slash_command(name='shop', description='Каталог товаров, доступных к приобретению')
-  async def shop(self, ia: disnake.AppCmdInter):
-    self.bot.add_user_to_db(ia.author.id)
+  async def shop(self, inter: disnake.AppCmdInter):
+    self.bot.add_user_to_db(inter.author.id)
     items=self.bot.db
     dropdown = ShopDropdown(items)
     view = disnake.ui.View(timeout=None)
@@ -96,7 +96,7 @@ class Inventory(commands.Cog):
     embed.set_author(name='Магазин')
     for i in self.bot.db['items']:
       embed.add_field(name=str(self.bot.db['items'][str(i)]['name'])+': '+str(self.bot.db['items'][str(i)]['price'])+'<:kirieshka:1100873685201588285>', value=str(self.bot.db['items'][str(i)]['description']), inline=False)
-    await ia.response.send_message(embed=embed, view=view, ephemeral=True)
+    await inter.response.send_message(embed=embed, view=view, ephemeral=True)
 
 class CustomRoleModal(disnake.ui.Modal):
     def __init__(self, bot) -> None:
