@@ -1,5 +1,6 @@
 import disnake
 import random
+import time
 from disnake.ext import commands
 from typing import Optional
 
@@ -123,7 +124,7 @@ class CustomRoleModal(disnake.ui.Modal):
         ]
         super().__init__(title="Создание роли", custom_id="customrole", components=components, timeout=3600)
     async def callback(self, inter: disnake.ModalInteraction) -> None:
-      role_name = '[custom] '+str(inter.text_values["name"])
+      role_name = str(inter.text_values["name"])
       role_color = inter.text_values["color"]
       if role_color:
         role_color = disnake.Color(int(role_color, 16))
@@ -131,13 +132,16 @@ class CustomRoleModal(disnake.ui.Modal):
       else:
         role = await inter.guild.create_role(name=role_name)
       await inter.author.add_roles(role)
-      await inter.response.send_message('Роль создана!', ephemeral=True)
+      self.bot['members'][str(inter.user.id)]['role']['id'] = role.id
+      self.bot['members'][str(inter.user.id)]['role']['ts'] = int(time.time())//86400*86400+2592000
+      self.bot['members'][str(inter.user.id)]['role']['expired'] = False
+      await inter.response.send_message(f'Роль создана!\nВы можете кастомизировать её в любой момент командой `/customrole`.\nРоль истечёт <t:{self.bot["members"][str(inter.user.id)]["role"]["ts"]}>.', ephemeral=True)
 
     async def on_error(self, error: Exception, inter: disnake.ModalInteraction) -> None:
-        if not 'customRole' in self.bot.db['members'][str(inter.user.id)]['inventory']:
-          self.bot.db['members'][str(inter.user.id)]['inventory']['customRole'] = 1
+        if not 'customRole' in self.bot['members'][str(inter.user.id)]['inventory']:
+          self.bot['members'][str(inter.user.id)]['inventory']['customRole'] = 1
         else:
-          self.bot.db['members'][str(inter.user.id)]['inventory']['customRole'] += 1
+          self.bot['members'][str(inter.user.id)]['inventory']['customRole'] += 1
         await inter.response.send_message("Ты указал неправильный Hex-код. Талон был возвращён.", ephemeral=True)
 
 class ShopConfirm(disnake.ui.View):
@@ -169,11 +173,21 @@ class InvConfirm(disnake.ui.View):
         self.stop()
       else:
         if self.item == 'customRole':
-          await inter.response.send_modal(modal=CustomRoleModal(self.bot))
+          if not self.bot['members'][str(inter.user.id)]['role']['id']:
+            await inter.response.send_modal(modal=CustomRoleModal(self.bot))
+          else:
+            if self.bot['members'][str(inter.user.id)]['role']['expired']:
+              self.bot['members'][str(inter.user.id)]['role']['ts'] = int(time.time())//86400*86400+2592000
+              self.bot['members'][str(inter.user.id)]['role']['expired'] = False
+              inter.user.add_roles(inter.guild.get_role(self.bot['members'][str(inter.user.id)]['role']['id']))
+              await inter.response.send_message(f'Кастомная роль восстановлена и будет действовать до <t:{self.bot["members"][str(inter.user.id)]["role"]["ts"]}>.',ephemeral=True)
+            else:
+              self.bot['members'][str(inter.user.id)]['role']['ts'] += 2592000
+              await inter.response.send_message(f'Время действия кастомной роли продлено до <t:{self.bot["members"][str(inter.user.id)]["role"]["ts"]}>.',ephemeral=True)
         elif self.item == 'breadPack':
           win = random.randint(250,750)
           self.bot['members'][str(inter.author.id)]['balance'] += win
-          await inter.response.send_message('В пачке вам попалось {}<:kirieshka:1100873685201588285>'.format(win), ephemeral=True)
+          await inter.response.send_message(f'В пачке вам попалось {win}<:kirieshka:1100873685201588285>', ephemeral=True)
         elif self.item == 'lotteryRole':
           if random.randint(1,4) == 4:
             if not 'customRole' in self.bot['members'][str(inter.user.id)]['inventory']:

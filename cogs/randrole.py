@@ -41,6 +41,13 @@ class CogScheduler(commands.Cog):
             minute='0',
             second='0'
         )
+        self.scheduler.add_job(
+            self.event_customrole,
+            trigger='cron',
+            hour='3',
+            minute='0',
+            second='1'
+        )
 
         self.scheduler.start()
 
@@ -49,11 +56,33 @@ class CogScheduler(commands.Cog):
         self.scheduler.shutdown(False)
 
     async def event_colorfunding_start(self):
-        print('Да начнётся же Цветной сбор! -> START')  
+        print('Да начнётся же Цветной сбор! -> START')
         self.bot.db['colorFunding']['funded'] = False
         self.bot.db['colorFunding']['pledge'] = 0
         for user in self.bot.db['members']:
             self.bot.db['members'][user]['hold'] = 0
+
+    async def event_customrole(self):
+        guild = self.bot.get_guild(305031592068513796)
+        for user in self.bot.db['members']:
+            if self.bot.db['members'][user]['role']:
+                if self.bot.db['members'][user]['role']['ts'] <= int(time.time()):
+                    role = guild.get_role(self.bot.db['members'][user]['role']['id'])
+                    if self.bot.db['members'][user]['role']['expired'] == True:
+                        member = guild.get_member(int(user))
+                        await role.delete()
+                        self.bot.db['members'][user]['role']['id'] = 0
+                        if member.dm_channel == None:
+                            await member.create_dm()
+                        await member.dm_channel.send(f'**Ваша кастом роль была удалена.**\nНе то, чтобы вы многое потеряли, просто теперь вам придётся пересоздавать её.\nТакие дела.')
+                    else:
+                        self.bot.db['members'][user]['role']['expired'] = True
+                        self.bot.db['members'][user]['role']['ts'] += 259200
+                        member = guild.get_member(int(user))
+                        await member.remove_roles(role)
+                        if member.dm_channel == None:
+                            await member.create_dm()
+                        await member.dm_channel.send(f'**Срок годности вашей кастом роли истёк...**\nЕсли вы не продлите её до <t:{self.bot.db["members"][user]["role"]["ts"]}:F>, она будет безвозвратно удалена и вам придётся создавать новую!\nВы ведь не хотите этого допустить?')
 
     async def event_colorfunding_end(self):
         print('Цветной сбор окончен. -> END')

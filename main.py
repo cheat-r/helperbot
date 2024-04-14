@@ -12,11 +12,11 @@ class Bot(commands.Bot):
         self.start_time = datetime.now()
         self.task_autosave.start()
         super().__init__(
-            command_prefix="!",
+            command_prefix="?",
             help_command=None,
             intents=disnake.Intents.all(),
             status=disnake.Status.idle,
-            activity=disnake.CustomActivity(state="[Редизайн!!!]", name='Custom Status'),
+            activity=disnake.CustomActivity(state="[ugrnd.ru]", name='Custom Status'),
             reload=True,
             *args,
             **kwargs
@@ -59,7 +59,12 @@ class Bot(commands.Bot):
                 "accessGranted": False,
                 "donator": 0
                 },
-                "inventory": {}
+                "inventory": {},
+                "role": {
+                    "id": 0,
+                    "ts": 0,
+                    "expired": False
+                }
             }
 
 bot = Bot()
@@ -84,6 +89,13 @@ async def cogunload(ctx, extension):
 @commands.is_owner()
 async def cogreload(ctx, extension):
     bot.reload_extension(f'cogs.{extension}')
+    await ctx.message.delete()
+
+@bot.command()
+@commands.is_owner()
+async def status(ctx, *, text):
+    activity = disnake.CustomActivity(state=text, name='Custom Status')
+    await bot.change_presence(status=disnake.Status.idle, activity=activity)
     await ctx.message.delete()
 
 for filename in os.listdir('cogs'):
