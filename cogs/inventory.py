@@ -142,7 +142,7 @@ class CustomRoleModal(disnake.ui.Modal):
           self.bot['members'][str(inter.user.id)]['inventory']['customRole'] = 1
         else:
           self.bot['members'][str(inter.user.id)]['inventory']['customRole'] += 1
-        await inter.response.send_message("Ты указал неправильный Hex-код. Талон был возвращён.", ephemeral=True)
+        await inter.response.send_message("Ты указал неправильный Hex-код. Сертификат был возвращён.", ephemeral=True)
 
 class ShopConfirm(disnake.ui.View):
     def __init__(self):
@@ -179,7 +179,7 @@ class InvConfirm(disnake.ui.View):
             if self.bot['members'][str(inter.user.id)]['role']['expired']:
               self.bot['members'][str(inter.user.id)]['role']['ts'] = int(time.time())//86400*86400+2592000
               self.bot['members'][str(inter.user.id)]['role']['expired'] = False
-              inter.user.add_roles(inter.guild.get_role(self.bot['members'][str(inter.user.id)]['role']['id']))
+              await inter.user.add_roles(inter.guild.get_role(self.bot['members'][str(inter.user.id)]['role']['id']))
               await inter.response.send_message(f'Кастомная роль восстановлена и будет действовать до <t:{self.bot["members"][str(inter.user.id)]["role"]["ts"]}>.',ephemeral=True)
             else:
               self.bot['members'][str(inter.user.id)]['role']['ts'] += 2592000
@@ -194,7 +194,7 @@ class InvConfirm(disnake.ui.View):
               self.bot['members'][str(inter.user.id)]['inventory']['customRole'] = 1
             else:
               self.bot['members'][str(inter.user.id)]['inventory']['customRole'] += 1
-            await inter.response.send_message('Вам крайне повезло, вы выиграли `Талон на кастомную роль`!', ephemeral=True)
+            await inter.response.send_message('Вам крайне повезло, вы выиграли `Сертификат на кастомную роль`!', ephemeral=True)
           else:
             await inter.response.send_message('Увы, билет оказался проигрышным. Вам не повезло.', ephemeral=True)
         elif self.item == 'beer':
@@ -205,7 +205,8 @@ class InvConfirm(disnake.ui.View):
           '<:omor:1112465534504665099>',
           'Надо будет ещё бутылку купить.',
           "so, you lot gonna scroll by without sayin' \nvvyeerraarrsesssarsdaandimthgrasssmannpunkyeeeyahhavint",
-          'В приступе кайфа слышится тихий, но явный звук: \n**ж.** \nЧто (или кто) это было - не знает даже источник звука.']
+          'В приступе кайфа слышится тихий, но явный звук: \n**ж.** \nЧто (или кто) это было - не знает даже источник звука.',
+          'Не ожидали? Я тоже.']
           embed = disnake.Embed(color=disnake.Color(0x474896))
           embed.description = options[random.randint(0, len(options)-1)]
           embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/1017923933896441907/1112829028555034684/beer.gif')
